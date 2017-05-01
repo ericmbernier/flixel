@@ -208,17 +208,17 @@ class FlxStringUtil
 		var prefix:String = "<font size='" + Size + "' color='#" + Color + "'>";
 		var suffix:String = "</font>";
 		
-		if (Bold) 
+		if (Bold)
 		{
 			prefix = "<b>" + prefix;
 			suffix = suffix + "</b>";
 		}
-		if (Italic) 
+		if (Italic)
 		{
 			prefix = "<i>" + prefix;
 			suffix = suffix + "</i>";
 		}
-		if (Underlined) 
+		if (Underlined)
 		{
 			prefix = "<u>" + prefix;
 			suffix = suffix + "</u>";
@@ -241,7 +241,7 @@ class FlxStringUtil
 		{
 			cl = cast Obj;
 		}
-		else 
+		else
 		{
 			cl = Type.getClass(Obj);
 		}
@@ -257,14 +257,47 @@ class FlxStringUtil
 		}
 		return s;
 	}
+
+	/**
+	 * Returns the host from the specified URL.
+	 * The host is one of three parts that comprise the authority.  (User and port are the other two parts.)
+	 * For example, the host for "ftp://anonymous@ftp.domain.test:990/" is "ftp.domain.test".
+	 *
+	 * @return	The host from the URL; or the empty string ("") upon failure.
+	 * @since 4.3.0
+	 */
+	public static function getHost(url:String):String
+	{
+		var hostFromURL:EReg = ~/^(?:[a-z][a-z0-9+\-.]*:\/\/)?(?:[a-z0-9\-._~%!$&'()*+,;=]+@)?([a-z0-9\-._~%]{3,}|\[[a-f0-9:.]+\])?(?::[0-9]+)?/i;
+		if (hostFromURL.match(url))
+		{
+			var host = hostFromURL.matched(1);
+			return (host != null) ? host.urlDecode().toLowerCase() : "";
+		}
+
+		return "";
+	}
 	
 	/**
-	 * Returns the domain of a URL.
+	 * Returns the domain from the specified URL.
+	 * The domain, in this case, refers specifically to the first and second levels only.
+	 * For example, the domain for "api.haxe.org" is "haxe.org".
+	 *
+	 * @return	The domain from the URL; or the empty string ("") upon failure. 
 	 */
 	public static function getDomain(url:String):String
 	{
-		var regex:EReg = ~/(?:[a-z0-9.+-]+:\/\/)(?:[a-z0-9-]+\.)*([a-z0-9-]+\.[a-z0-9-]+)/i;
-		return regex.match(url) ? regex.matched(1).toLowerCase() : "local";
+		var host:String = getHost(url);
+
+		var isLocalhostOrIpAddress:EReg = ~/^(localhost|[0-9.]+|\[[a-f0-9:.]+\])$/i;
+		var domainFromHost:EReg = ~/^(?:[a-z0-9\-]+\.)*([a-z0-9\-]+\.[a-z0-9\-]+)$/i;
+		if (!isLocalhostOrIpAddress.match(host) && domainFromHost.match(host))
+		{
+			var domain = domainFromHost.matched(1);
+			return (domain != null) ? domain.toLowerCase() : "";
+		}
+
+		return "";
 	}
 	
 	/**
@@ -397,7 +430,7 @@ class FlxStringUtil
 	 */
 	public static function bitmapToCSV(Bitmap:BitmapData, Invert:Bool = false, Scale:Int = 1, ?ColorMap:Array<FlxColor>):String
 	{
-		if (Scale < 1) 
+		if (Scale < 1)
 		{
 			Scale = 1;
 		}
