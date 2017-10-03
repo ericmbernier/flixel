@@ -1,6 +1,7 @@
 package flixel.util;
 
 import flash.display.BitmapData;
+import flixel.system.debug.FlxDebugger.FlxDebuggerLayout;
 import massive.munit.Assert;
 
 class FlxStringUtilTest
@@ -187,5 +188,35 @@ class FlxStringUtilTest
 		
 		for (path in generateLocalPaths())
 			Assert.areEqual("", FlxStringUtil.getDomain(path));
+	}
+
+	@Test
+	function testGetClassName()
+	{
+		function test(value:Dynamic, simple:Bool, expected:String)
+			Assert.areEqual(FlxStringUtil.getClassName(value, simple), expected);
+
+		var longName = "flixel.FlxSprite";
+		var shortName = "FlxSprite";
+
+		test(FlxSprite, false, longName);
+		test(FlxSprite, true, shortName);
+		test(new FlxSprite(), false, longName);
+		test(new FlxSprite(), true, shortName);
+	}
+
+	@Test
+	function testGetEnumName()
+	{
+		function test(value, simple:Bool, expected:String)
+			Assert.areEqual(FlxStringUtil.getEnumName(value, simple), expected);
+
+		var longName = "flixel.system.debug.FlxDebuggerLayout";
+		var shortName = "FlxDebuggerLayout";
+
+		test(FlxDebuggerLayout, false, longName);
+		test(FlxDebuggerLayout, true, shortName);
+		test(FlxDebuggerLayout.BIG, false, longName);
+		test(FlxDebuggerLayout.BIG, true, shortName);
 	}
 }

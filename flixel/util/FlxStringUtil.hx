@@ -5,6 +5,7 @@ import flixel.FlxG;
 import flixel.math.FlxMath;
 import flixel.system.FlxAssets;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
+import flixel.util.typeLimit.OneOfTwo;
 using StringTools;
 
 #if flash
@@ -228,33 +229,50 @@ class FlxStringUtil
 	}
 	
 	/**
-	 * Get the String name of any Object.
+	 * Get the string name of any class or class instance. Wraps `Type.getClassName()`.
 	 * 
-	 * @param	Obj		The object in question.
-	 * @param	Simple	Returns only the class name, not the package or packages.
-	 * @return	The name of the Class as a String object.
+	 * @param	objectOrClass	The class or class instance in question.
+	 * @param	simple	Returns only the type name, without package(s).
+	 * @return	The name of the class as a string.
 	 */
-	public static function getClassName(Obj:Dynamic, Simple:Bool = false):String
+	public static function getClassName(objectOrClass:Dynamic, simple:Bool = false):String
 	{
 		var cl:Class<Dynamic>;
-		if (Std.is(Obj, Class))
-		{
-			cl = cast Obj;
-		}
+		if (Std.is(objectOrClass, Class))
+			cl = cast objectOrClass;
 		else
-		{
-			cl = Type.getClass(Obj);
-		}
+			cl = Type.getClass(objectOrClass);
 		
-		var s:String = Type.getClassName(cl);
-		if (s != null)
-		{
-			s = s.replace("::", ".");
-			if (Simple)
-			{
-				s = s.substr(s.lastIndexOf(".") + 1);
-			}
-		}
+		return formatPackage(Type.getClassName(cl), simple);
+	}
+
+	/**
+	 * Get the string name of any enum or enum value. Wraps `Type.getEnumName()`.
+	 * 
+	 * @param	enumValueOrEnum	The enum value or enum in question.
+	 * @param	simple	Returns only the type name, without package(s).
+	 * @return	The name of the enum as a string.
+	 * @since 4.4.0
+	 */
+	public static function getEnumName(enumValueOrEnum:OneOfTwo<EnumValue, Enum<Dynamic>>, simple:Bool = false):String
+	{
+		var e:Enum<Dynamic>;
+		if (Std.is(enumValueOrEnum, Enum))
+			e = cast enumValueOrEnum;
+		else
+			e = Type.getEnum(enumValueOrEnum);
+		
+		return formatPackage(Type.getEnumName(e), simple);
+	}
+
+	private static function formatPackage(s:String, simple:Bool):String
+	{
+		if (s == null)
+			return null;
+
+		s = s.replace("::", ".");
+		if (simple)
+			s = s.substr(s.lastIndexOf(".") + 1);
 		return s;
 	}
 
