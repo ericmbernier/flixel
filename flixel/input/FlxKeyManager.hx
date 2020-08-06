@@ -3,6 +3,7 @@ package flixel.input;
 import flash.events.KeyboardEvent;
 import flixel.FlxG;
 import flixel.input.FlxInput.FlxInputState;
+import flixel.input.keyboard.FlxKey;
 
 class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 {
@@ -10,71 +11,82 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 	 * Whether or not keyboard input is currently enabled.
 	 */
 	public var enabled:Bool = true;
+
 	/**
-	 * List of keys on which preventDefault() is called, useful on HTML5 to stop 
+	 * List of keys on which preventDefault() is called, useful on HTML5 to stop
 	 * the browser from scrolling when pressing the up or down key for example, or
 	 * on android to prevent the default back key action.
 	 */
 	public var preventDefaultKeys:Array<Key> = [];
-	
+
 	/**
 	 * Helper class to check if a key is pressed.
 	 */
 	public var pressed(default, null):KeyList;
+
 	/**
 	 * Helper class to check if a key was just pressed.
 	 */
 	public var justPressed(default, null):KeyList;
+
+	/**
+	 * Helper class to check if a key is released.
+	 * @since 4.8.0
+	 */
+	public var released(default, null):KeyList;
+
 	/**
 	 * Helper class to check if a key was just released.
 	 */
 	public var justReleased(default, null):KeyList;
+
 	/**
 	 * Internal storage of input keys as an array, for efficient iteration.
 	 */
 	@:allow(flixel.input.FlxBaseKeyList)
-	private var _keyListArray:Array<FlxInput<Key>> = [];
+	var _keyListArray:Array<FlxInput<Key>> = [];
+
 	/**
 	 * Internal storage of input keys as a map, for efficient indexing.
 	 */
-	private var _keyListMap:Map<Int, FlxInput<Key>> = new Map<Int, FlxInput<Key>>();
-	
+	var _keyListMap:Map<Int, FlxInput<Key>> = new Map<Int, FlxInput<Key>>();
+
 	/**
 	 * Check to see if at least one key from an array of keys is pressed.
-	 * 
+	 *
 	 * @param	KeyArray 	An array of key names
 	 * @return	Whether at least one of the keys passed in is pressed.
 	 */
 	public inline function anyPressed(KeyArray:Array<Key>):Bool
-	{ 
+	{
 		return checkKeyArrayState(KeyArray, PRESSED);
 	}
-	
+
 	/**
 	 * Check to see if at least one key from an array of keys was just pressed.
-	 * 
+	 *
 	 * @param	KeyArray 	An array of key names
 	 * @return	Whether at least one of the keys passed was just pressed.
 	 */
 	public inline function anyJustPressed(KeyArray:Array<Key>):Bool
-	{ 
+	{
 		return checkKeyArrayState(KeyArray, JUST_PRESSED);
 	}
-	
+
 	/**
 	 * Check to see if at least one key from an array of keys was just released.
-	 * 
+	 *
 	 * @param	KeyArray 	An array of key names
 	 * @return	Whether at least one of the keys passed was just released.
 	 */
 	public inline function anyJustReleased(KeyArray:Array<Key>):Bool
-	{ 
+	{
 		return checkKeyArrayState(KeyArray, JUST_RELEASED);
 	}
-	
+
 	/**
 	 * Get the ID of the first key which is currently pressed.
-	 * 
+	 *
 	 * @return	The ID of the first pressed key or -1 if none are pressed.
 	 */
 	public function firstPressed():Int
@@ -88,10 +100,10 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 		}
 		return -1;
 	}
-	
+
 	/**
 	 * Get the ID of the first key which has just been pressed.
-	 * 
+	 *
 	 * @return	The ID of the key or -1 if none were just pressed.
 	 */
 	public function firstJustPressed():Int
@@ -105,10 +117,10 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 		}
 		return -1;
 	}
-	
+
 	/**
 	 * Get the ID of the first key which has just been released.
-	 * 
+	 *
 	 * @return	The ID of the key or -1 if none were just released.
 	 */
 	public function firstJustReleased():Int
@@ -122,44 +134,56 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 		}
 		return -1;
 	}
-	
+
 	/**
 	 * Check the status of a single of key
-	 * 
+	 *
 	 * @param	KeyCode		KeyCode to be checked.
 	 * @param	Status		The key state to check for.
 	 * @return	Whether the provided key has the specified status.
 	 */
 	public function checkStatus(KeyCode:Key, Status:FlxInputState):Bool
 	{
-		var key:FlxInput<Key> = getKey(KeyCode);
-		
-		if (key != null)
+		return switch (KeyCode)
 		{
-			if (key.hasState(Status))
-			{
-				return true;
-			}
+			case FlxKey.ANY:
+				switch (Status)
+				{
+					case PRESSED: pressed.ANY;
+					case JUST_PRESSED: justPressed.ANY;
+					case RELEASED: released.ANY;
+					case JUST_RELEASED: justReleased.ANY;
+				}
+			case FlxKey.NONE:
+				switch (Status)
+				{
+					case PRESSED: pressed.NONE;
+					case JUST_PRESSED: justPressed.NONE;
+					case RELEASED: released.NONE;
+					case JUST_RELEASED: justReleased.NONE;
+				}
+			default:
+				var key = getKey(KeyCode);
+				if (key == null)
+				{
+					#if debug
+					throw 'Invalid key code: $KeyCode.';
+					#end
+					return false;
+				}
+				return key.hasState(Status);
 		}
-		#if FLX_DEBUG
-		else
-		{
-			throw 'Invalid key code: $KeyCode.';
-		}
-		#end
-		
-		return false;
 	}
 
 	/**
 	 * Get an Array of Key that are in a pressed state
-	 * 
+	 *
 	 * @return	Array of keys that are currently pressed.
 	 */
 	public function getIsDown():Array<FlxInput<Key>>
 	{
 		var keysDown = new Array<FlxInput<Key>>();
-		
+
 		for (key in _keyListArray)
 		{
 			if (key != null && key.pressed)
@@ -178,7 +202,7 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 		_keyListArray = null;
 		_keyListMap = null;
 	}
-	
+
 	/**
 	 * Resets all the keys.
 	 */
@@ -192,104 +216,101 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 			}
 		}
 	}
-	
-	private function new(keyListClass:Class<FlxBaseKeyList>)
+
+	function new(createKeyList:FlxInputState->FlxKeyManager<Dynamic, Dynamic>->KeyList)
 	{
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
-		
-		pressed = cast Type.createInstance(keyListClass, [FlxInputState.PRESSED, this]);
-		justPressed = cast Type.createInstance(keyListClass, [FlxInputState.JUST_PRESSED, this]);
-		justReleased = cast Type.createInstance(keyListClass, [FlxInputState.JUST_RELEASED, this]);
+
+		pressed = createKeyList(FlxInputState.PRESSED, this);
+		released = createKeyList(FlxInputState.RELEASED, this);
+		justPressed = createKeyList(FlxInputState.JUST_PRESSED, this);
+		justReleased = createKeyList(FlxInputState.JUST_RELEASED, this);
 	}
-	
+
 	/**
 	 * Updates the key states (for tracking just pressed, just released, etc).
 	 */
-	private function update():Void
+	function update():Void
 	{
 		for (key in _keyListArray)
 		{
-			if (key != null) 
+			if (key != null)
 			{
 				key.update();
 			}
 		}
 	}
-	
+
 	/**
 	 * Helper function to check the status of an array of keys
-	 * 
+	 *
 	 * @param	KeyArray	An array of keys as Strings
 	 * @param	State		The key state to check for
 	 * @return	Whether at least one of the keys has the specified status
 	 */
-	private function checkKeyArrayState(KeyArray:Array<Key>, State:FlxInputState):Bool
+	function checkKeyArrayState(KeyArray:Array<Key>, State:FlxInputState):Bool
 	{
 		if (KeyArray == null)
 		{
 			return false;
 		}
-		
+
 		for (code in KeyArray)
 		{
-			var key:FlxInput<Key> = getKey(code);
-			
-			if (key != null)
-			{
-				if (key.hasState(State))
-				{
-					return true;
-				}
-			}
+			if (checkStatus(code, State))
+				return true;
 		}
-		
+
 		return false;
 	}
-	
+
 	/**
 	 * Event handler so FlxGame can toggle keys.
 	 */
-	private function onKeyUp(event:KeyboardEvent):Void
+	function onKeyUp(event:KeyboardEvent):Void
 	{
 		var c:Int = resolveKeyCode(event);
 		handlePreventDefaultKeys(c, event);
-		
-		if (enabled) 
+
+		if (enabled)
 		{
 			updateKeyStates(c, false);
 		}
 	}
-	
+
 	/**
 	 * Internal event handler for input and focus.
 	 */
-	private function onKeyDown(event:KeyboardEvent):Void
+	function onKeyDown(event:KeyboardEvent):Void
 	{
 		var c:Int = resolveKeyCode(event);
 		handlePreventDefaultKeys(c, event);
-		
-		if (enabled) 
+
+		if (enabled)
 		{
 			updateKeyStates(c, true);
 		}
 	}
-	
-	private function handlePreventDefaultKeys(keyCode:Int, event:KeyboardEvent):Void
+
+	function handlePreventDefaultKeys(keyCode:Int, event:KeyboardEvent):Void
 	{
 		var key:FlxInput<Key> = getKey(keyCode);
 		if (key != null && preventDefaultKeys != null && preventDefaultKeys.indexOf(key.ID) != -1)
 		{
 			event.stopImmediatePropagation();
 			event.stopPropagation();
+			#if (html5 || android)
+			event.preventDefault();
+			#end
 		}
 	}
-	
+
 	/**
-	 * A Helper function to check whether an array of keycodes contains 
+	 * A Helper function to check whether an array of keycodes contains
 	 * a certain key safely (returns false if the array is null).
-	 */ 
-	private function inKeyArray(KeyArray:Array<Key>, Event:KeyboardEvent):Bool
+	 */
+	function inKeyArray(KeyArray:Array<Key>, Event:KeyboardEvent):Bool
 	{
 		if (KeyArray == null)
 		{
@@ -308,20 +329,20 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 		}
 		return false;
 	}
-	
-	private function resolveKeyCode(e:KeyboardEvent):Int
+
+	function resolveKeyCode(e:KeyboardEvent):Int
 	{
 		return e.keyCode;
 	}
-	
+
 	/**
 	 * A helper function to update the key states based on a keycode provided.
 	 */
-	private inline function updateKeyStates(KeyCode:Int, Down:Bool):Void
+	inline function updateKeyStates(KeyCode:Int, Down:Bool):Void
 	{
 		var key:FlxInput<Key> = getKey(KeyCode);
-		
-		if (key != null) 
+
+		if (key != null)
 		{
 			if (Down)
 			{
@@ -333,18 +354,18 @@ class FlxKeyManager<Key:Int, KeyList:FlxBaseKeyList> implements IFlxInputManager
 			}
 		}
 	}
-	
-	private inline function onFocus():Void {}
 
-	private inline function onFocusLost():Void
+	inline function onFocus():Void {}
+
+	inline function onFocusLost():Void
 	{
 		reset();
 	}
-	
+
 	/**
 	 * Return a key from the key list, if found. Will return null if not found.
 	 */
-	private inline function getKey(KeyCode:Int):FlxInput<Key>
+	inline function getKey(KeyCode:Int):FlxInput<Key>
 	{
 		return _keyListMap.get(KeyCode);
 	}
